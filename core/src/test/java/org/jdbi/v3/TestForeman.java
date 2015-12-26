@@ -13,51 +13,79 @@
  */
 package org.jdbi.v3;
 
-
+import static org.easymock.EasyMock.replay;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Types;
 
+import org.easymock.EasyMock;
+import org.easymock.EasyMockSupport;
 import org.jdbi.v3.tweak.Argument;
 import org.jdbi.v3.tweak.ArgumentFactory;
+import org.junit.After;
 import org.junit.Test;
 
-public class TestForeman
+public class TestForeman extends EasyMockSupport
 {
-    @Test
-    public void testWaffling()
-    {
-        final Foreman foreman = new Foreman();
+    private static final String I_AM_A_STRING = "I am a String";
 
-        final Argument longArgument = foreman.waffle(Object.class, new Long(3L), null);
-        assertSame(LongArgument.class, longArgument.getClass());
+    private final Foreman foreman = new Foreman();
 
-        final Argument shortArgument = foreman.waffle(Object.class, (short) 2000, null);
-        assertSame(ShortArgument.class, shortArgument.getClass());
+    public PreparedStatement stmt = createMock(PreparedStatement.class);
 
-        final Argument stringArgument = foreman.waffle(Object.class, "I am a String!", null);
-        assertSame(StringArgument.class, stringArgument.getClass());
+    @After
+    public void verify() {
+        verifyAll();
     }
 
     @Test
-    public void testExplicitWaffling()
+    public void testWaffleLong() throws Exception
     {
-        final Foreman foreman = new Foreman();
-
-        final Argument longArgument = foreman.waffle(Long.class, new Long(3L), null);
-        assertSame(LongArgument.class, longArgument.getClass());
-
-        final Argument shortArgument = foreman.waffle(short.class, (short) 2000, null);
-        assertSame(ShortArgument.class, shortArgument.getClass());
-
-        final Argument stringArgument = foreman.waffle(String.class, "I am a String!", null);
-        assertSame(StringArgument.class, stringArgument.getClass());
+        stmt.setLong(1, 3);
+        replay(stmt);
+        foreman.waffle(Object.class, new Long(3L), null).apply(1, stmt, null);
     }
 
     @Test
-    public void testPull88WeirdClassArgumentFactory()
+    public void testWaffleShort() throws Exception
+    {
+        stmt.setShort(2, (short) 2000);
+        replay(stmt);
+        foreman.waffle(Object.class, (short) 2000, null).apply(2, stmt, null);
+    }
+
+    @Test
+    public void testWaffleString() throws Exception {
+        stmt.setString(3, I_AM_A_STRING);
+        replay(stmt);
+        foreman.waffle(Object.class, I_AM_A_STRING, null).apply(3, stmt, null);
+    }
+
+    @Test
+    public void testExplicitWaffleLong() throws Exception {
+        stmt.setLong(1, 3);
+        replay(stmt);
+        foreman.waffle(Long.class, new Long(3L), null).apply(1, stmt, null);
+    }
+
+    @Test
+    public void testExplicitWaffleShort() throws Exception {
+        stmt.setShort(2, (short) 2000);
+        replay(stmt);
+        foreman.waffle(short.class, (short) 2000, null).apply(2, stmt, null);
+    }
+
+    @Test
+    public void testExplicitWaffleString() throws Exception {
+        stmt.setString(3, I_AM_A_STRING);
+        replay(stmt);
+        foreman.waffle(String.class, I_AM_A_STRING, null).apply(3, stmt, null);
+    }
+
+    @Test
+    public void testPull88WeirdClassArgumentFactory() throws Exception
     {
         final Foreman foreman = new Foreman();
         foreman.register(new WeirdClassArgumentFactory());
@@ -66,22 +94,28 @@ public class TestForeman
         // when using SqlStatement#bind(..., Object) and the Object is != null
         assertEquals(WeirdArgument.class, foreman.waffle(Weird.class, new Weird(), null).getClass());
 
-        assertEquals(ObjectArgument.class, foreman.waffle(Object.class, new Weird(), null).getClass());
+        stmt.setObject(EasyMock.eq(2), EasyMock.anyObject());
+        replay(stmt);
+        foreman.waffle(Object.class, new Weird(), null).apply(2, stmt, null);
     }
 
     @Test
-    public void testPull88NullClassArgumentFactory()
+    public void testPull88NullClassArgumentFactory() throws Exception
     {
         final Foreman foreman = new Foreman();
         foreman.register(new WeirdClassArgumentFactory());
 
         assertEquals(WeirdArgument.class, foreman.waffle(Weird.class, null, null).getClass());
-        assertEquals(ObjectArgument.class, foreman.waffle(Object.class, null, null).getClass());
+
+        stmt.setNull(3, Types.NULL);
+        replay(stmt);
+        foreman.waffle(Object.class, null, null).apply(3, stmt, null);
     }
 
     @Test
     public void testPull88WeirdValueArgumentFactory()
     {
+        replay(stmt);
         final Foreman foreman = new Foreman();
         foreman.register(new WeirdValueArgumentFactory());
 
@@ -92,13 +126,17 @@ public class TestForeman
     }
 
     @Test
-    public void testPull88NullValueArgumentFactory()
+    public void testPull88NullValueArgumentFactory() throws Exception
     {
         final Foreman foreman = new Foreman();
         foreman.register(new WeirdValueArgumentFactory());
 
-        assertEquals(ObjectArgument.class, foreman.waffle(Weird.class, null, null).getClass());
-        assertEquals(ObjectArgument.class, foreman.waffle(Object.class, null, null).getClass());
+        stmt.setNull(3, Types.NULL);
+        stmt.setNull(5, Types.NULL);
+        replay(stmt);
+
+        foreman.waffle(Weird.class, null, null).apply(3, stmt, null);
+        foreman.waffle(Object.class, null, null).apply(5, stmt, null);
     }
 
     private static class Weird

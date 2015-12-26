@@ -13,17 +13,19 @@
  */
 package org.jdbi.v3.sqlobject;
 
-import static org.junit.Assert.assertEquals;
+import java.sql.PreparedStatement;
+import java.sql.Types;
 
+import org.easymock.EasyMockSupport;
 import org.jdbi.v3.Binding;
-import org.jdbi.v3.Handle;
 import org.jdbi.v3.H2DatabaseRule;
+import org.jdbi.v3.Handle;
 import org.jdbi.v3.StatementContext;
 import org.jdbi.v3.Update;
 import org.junit.Rule;
 import org.junit.Test;
 
-public class TestBindBeanFactory
+public class TestBindBeanFactory extends EasyMockSupport
 {
     @Rule
     public H2DatabaseRule db = new H2DatabaseRule();
@@ -34,6 +36,18 @@ public class TestBindBeanFactory
     public void testBindBeanFactory()
         throws Exception
     {
+        PreparedStatement stmt = createMock(PreparedStatement.class);
+        TestBean testBean = new TestBean();
+
+        stmt.setLong(1, testBean.getALong());
+        stmt.setBoolean(2, testBean.getARealBoolean());
+        stmt.setNull(3, Types.BOOLEAN);
+        stmt.setString(4, testBean.getAString());
+        stmt.setObject(5, testBean.getAFoo());
+        stmt.setShort(6, testBean.getAShort());
+
+        replayAll();
+
         BindBean bindBeanImpl = getClass().getDeclaredMethod("dummyBindBean", int.class)
                 .getParameters()[0].getAnnotation(BindBean.class);
 
@@ -43,24 +57,27 @@ public class TestBindBeanFactory
         try (final Handle handle = db.openHandle()) {
             final Update testStatement = handle.createStatement("does not matter");
 
-            TestBean testBean = new TestBean();
 
             beanBinder.bind(testStatement, null, bindBeanImpl, testBean);
 
             StatementContext context = testStatement.getContext();
             Binding binding = context.getBinding();
 
-            assertEquals("LongArgument", binding.forName("ALong").getClass().getSimpleName());
-            assertEquals("BooleanArgument", binding.forName("ARealBoolean").getClass().getSimpleName());
-            assertEquals("BooleanArgument", binding.forName("ANullBoolean").getClass().getSimpleName());
-            assertEquals("StringArgument", binding.forName("AString").getClass().getSimpleName());
-            assertEquals("ObjectArgument", binding.forName("AFoo").getClass().getSimpleName());
-            assertEquals("ShortArgument", binding.forName("AShort").getClass().getSimpleName());
+            binding.forName("ALong").apply(1, stmt, null);
+            binding.forName("ARealBoolean").apply(2, stmt, null);
+            binding.forName("ANullBoolean").apply(3, stmt, null);
+            binding.forName("AString").apply(4, stmt, null);
+            binding.forName("AFoo").apply(5, stmt, null);
+            binding.forName("AShort").apply(6, stmt, null);
         }
+
+        verifyAll();
     }
 
     public static class TestBean
     {
+        private final Foo foo = new Foo();
+
         public long getALong()
         {
             return 4815162342L;
@@ -83,7 +100,7 @@ public class TestBindBeanFactory
 
         public Foo getAFoo()
         {
-            return new Foo();
+            return foo;
         }
 
         public Short getAShort()

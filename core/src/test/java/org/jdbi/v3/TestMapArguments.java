@@ -13,40 +13,50 @@
  */
 package org.jdbi.v3;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.junit.Assert.assertThat;
-
 import java.math.BigDecimal;
+import java.sql.PreparedStatement;
+import java.sql.Types;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.jdbi.v3.tweak.Argument;
+import org.easymock.EasyMockSupport;
+import org.junit.After;
 import org.junit.Test;
 
-public class TestMapArguments
+public class TestMapArguments extends EasyMockSupport
 {
+    private final PreparedStatement stmt = createMock(PreparedStatement.class);
+
+    @After
+    public void checkMock() {
+        verifyAll();
+    }
 
     @Test
     public void testBind() throws Exception
     {
+        stmt.setBigDecimal(5, BigDecimal.ONE);
+        replayAll();
+
         Map<String, Object> args = new HashMap<String, Object>();
         args.put("foo", BigDecimal.ONE);
         Foreman foreman = new Foreman();
         StatementContext ctx = new ConcreteStatementContext(new HashMap<String, Object>(), new MappingRegistry());
         MapArguments mapArguments = new MapArguments(foreman, ctx, args);
-        Argument argument = mapArguments.find("foo");
-        assertThat(argument, instanceOf(BigDecimalArgument.class));
+        mapArguments.find("foo").apply(5, stmt, null);
     }
 
     @Test
     public void testNullBinding() throws Exception
     {
+        stmt.setNull(3, Types.NULL);
+        replayAll();
+
         Map<String, Object> args = new HashMap<String, Object>();
         args.put("foo", null);
         Foreman foreman = new Foreman();
         StatementContext ctx = new ConcreteStatementContext(new HashMap<String, Object>(), new MappingRegistry());
         MapArguments mapArguments = new MapArguments(foreman, ctx, args);
-        Argument argument = mapArguments.find("foo");
-        assertThat(argument, instanceOf(ObjectArgument.class));
+        mapArguments.find("foo").apply(3, stmt, null);
     }
 }
