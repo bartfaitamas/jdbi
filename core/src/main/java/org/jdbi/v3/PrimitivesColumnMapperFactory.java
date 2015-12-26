@@ -19,6 +19,7 @@ import java.net.URL;
 import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import org.jdbi.v3.tweak.ResultColumnMapper;
 import org.jdbi.v3.util.BigDecimalColumnMapper;
@@ -36,6 +37,7 @@ import org.jdbi.v3.util.StringColumnMapper;
 import org.jdbi.v3.util.TimestampColumnMapper;
 import org.jdbi.v3.util.URIColumnMapper;
 import org.jdbi.v3.util.URLColumnMapper;
+import org.jdbi.v3.util.UUIDColumnMapper;
 
 /**
  * Result column mapper factory which knows how to map standard JDBC-recognized types.
@@ -72,6 +74,7 @@ public class PrimitivesColumnMapperFactory implements ResultColumnMapperFactory 
 
         mappers.put(URL.class, URLColumnMapper.INSTANCE);
         mappers.put(URI.class, URIColumnMapper.INSTANCE);
+        mappers.put(UUID.class, UUIDColumnMapper.INSTANCE);
     }
 
     @Override
